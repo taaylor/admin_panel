@@ -1,0 +1,54 @@
+services:
+  django:
+    build:
+      context: .
+      dockerfile: movies_admin/Dockerfile
+    restart: always
+    volumes:
+      - ./movies_admin:/opt/app
+      - volume_static:/data/static  # Статика
+      - volume_media:/data/media  # Медиа-файлы
+    env_file:
+      - .env
+    ports:
+      - 8000:8000
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  postgres:
+    image: postgres:16
+    restart: always
+    volumes:
+      - data_postgres:/var/lib/postgresql/data
+    env_file:
+      - .env
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s #Проверять БД каждые 5 секунд
+      retries: 3 # 3 попытки перед откатом контейнера
+      timeout: 3s # ожидать ответ неболее 3 сек
+
+  nginx:
+    build:
+      context: .
+      dockerfile: Dockerfile.ngx
+    restart: always
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./configs:/etc/nginx/conf.d:ro
+      - volume_static:/data/static  # Раздаем статику
+      - volume_media:/data/media  # Раздаем медиа
+    ports:
+      - 80:80
+    depends_on:
+      - django
+
+volumes:
+  data_postgres:
+  volume_static:
+  volume_media:
