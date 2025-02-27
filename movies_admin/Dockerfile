@@ -4,7 +4,7 @@ WORKDIR /opt/app
 
 ENV DJANGO_SETTINGS_MODULE="config.settings"
 
-COPY movies_admin/requirements.txt requirements.txt
+COPY requirements.txt requirements.txt
 COPY .env .env
 
 RUN  pip install --no-cache-dir --upgrade pip \
