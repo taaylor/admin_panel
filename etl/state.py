@@ -60,4 +60,7 @@ class State:
         self.storage.save_state(state)
 
     def get_state(self, key: str) -> Any:
-        return self.storage.retrieve_state().get(key, '1970-01-01 00:00:00')
+        state = self.storage.retrieve_state().get(key)
+        if not state or state == 'None':
+            return '1970-01-01 00:00:00'
+        return state

@@ -5,6 +5,7 @@ from contextlib import closing
 from typing import Generator, Literal
 
 import psycopg
+import psycopg.rows
 import redis
 import redis.exceptions
 
@@ -25,29 +26,26 @@ class GetUpdateObjectMixin(InitMixin):
         self, table: Literal["person", "genre"], key_state: str
     ) -> tuple[list, datetime.datetime]:
         """Получаем id всех измененных объектов"""
+
         with closing(self.connection.cursor()) as psql_cursor:
             # получаем последнее состояние
             time = self.state.get_state(key_state)
-
-            # формируем запрос
             query = f"""
                 SELECT id, modified
                 FROM content.{table}
-                WHERE modified > %s
+                WHERE modified > '{time}'
                 ORDER BY modified
                 LIMIT 100;
             """
-            psql_cursor.execute(query, (time,))
+            psql_cursor.execute(query)
             result = psql_cursor.fetchall()
-
             # получаем состояние из БД
             state = None
             if result:
                 state = result[-1][1]
-
+                print(state)
             # формируем ids из полученного результата
             ids = list(i[0] for i in result)
-
             return ids, state
 
 
@@ -61,7 +59,9 @@ class PostgresProducer(GetUpdateObjectMixin):
 
     def get_genre_update_ids(self) -> tuple[list, datetime.datetime]:
         """Получаем id измененных genre, состояние"""
-        genre = self._get_ids_update_object(table="genre", key_state=config.GENRE_STATE)
+        genre = self._get_ids_update_object(
+            table="genre", key_state=config.GENRE_STATE
+        )
         return genre
 
 
@@ -84,14 +84,14 @@ class PostgresEnricher(InitMixin):
             producer = PostgresProducer(self.connection, self.state)
             ids_person, person_state = producer.get_person_update_ids()
             ids_genre, genre_state = producer.get_genre_update_ids()
-
             values = (ids_person or config.NULL_ID, ids_genre or config.NULL_ID, time)
             psql_cursor.execute(query, values)
             result = psql_cursor.fetchall()
 
             fw_state = None
             if result:
-                fw_state = result[-1][0]
+                fw_state = result[-1][1]
+                print(fw_state)
 
             film_work_ids = list(i[0] for i in result)
 
@@ -106,20 +106,19 @@ class PostgresEnricher(InitMixin):
 
 class PostgresMerge(InitMixin):
     @backoff(exception=(psycopg.errors.DatabaseError, redis.exceptions.RedisError))
-    def get_update_film_work(self) -> Generator:
+    def get_update_film_work(self) -> tuple[list, dict]:
         ''' возвращает список измененных фильмов '''
 
-        with closing(self.connection.cursor()) as psql_cursor:
+        with closing(self.connection.cursor(row_factory=psycopg.rows.dict_row)) as psql_cursor:
             query = """
                 SELECT fw.id as fw_id, fw.title, fw.description, fw.rating, 
-                    fw.type, fw.created, fw.modified, pfw.role, p.id, 
-                    p.full_name, g.name
+                    fw.type, pfw.role, p.id, p.full_name, g.name
                 FROM content.film_work fw
                 LEFT JOIN content.person_film_work pfw ON pfw.film_work_id = fw.id
                 LEFT JOIN content.person p ON p.id = pfw.person_id
                 LEFT JOIN content.genre_film_work gfw ON gfw.film_work_id = fw.id
                 LEFT JOIN content.genre g ON g.id = gfw.genre_id
-                WHERE fw.id = ANY(%s); 
+                WHERE fw.id = ANY(%s);
             """
             enricher = PostgresEnricher(self.connection, self.state)
             ids_fw, states = enricher.get_film_work_based_on_related_table()
@@ -128,13 +127,7 @@ class PostgresMerge(InitMixin):
 
             psql_cursor.execute(query, value)
 
-            # обновляем состояние
-            self._update_states(self.state, states)
-
-            while res := psql_cursor.fetchmany(config.BATCH_SIZE):
-                yield res
-
-    @staticmethod
-    def _update_states(state: State, states: dict[str, datetime.datetime]) -> None:
-        for key, value in states.items():
-            state.set_state(key, value)
+            res = psql_cursor.fetchall()
+            
+            return res, states
+        

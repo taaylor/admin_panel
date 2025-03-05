@@ -3,6 +3,7 @@ import os
 
 import redis
 from dotenv import load_dotenv
+from elasticsearch import Elasticsearch
 
 load_dotenv()
 
@@ -23,8 +24,6 @@ REDIS = redis.Redis(
     decode_responses=True,
 )
 
-BATCH_SIZE = 100
-
 DATABASE = {
     'dbname': 'movies_db', 
     'user': 'admin',
@@ -32,6 +31,8 @@ DATABASE = {
     'host': 'localhost',
     'port': '5432'
 }
+
+ELASTICSEARCH = 'http://127.0.0.1:9200'
 
 # key state
 PERSON_STATE = 'person_state'
