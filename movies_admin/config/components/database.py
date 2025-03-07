@@ -1,16 +1,14 @@
 import os
 
 DATABASES = {
-    'default': {
-        'ENGINE': str(os.getenv('ENGINE')),
-        'NAME': str(os.getenv('POSTGRES_DB')),
-        'USER': str(os.getenv('POSTGRES_USER')),
-        'PASSWORD': str(os.getenv('POSTGRES_PASSWORD')),
-        'HOST': str(os.getenv('SQL_HOST')),
-        'PORT': str(os.getenv('SQL_PORT')),
-        'OPTIONS': {
-            'options': str(os.getenv('SQL_OPTIONS'))
-        }
+    "default": {
+        "ENGINE": str(os.getenv("ENGINE")),
+        "NAME": str(os.getenv("POSTGRES_DB")),
+        "USER": str(os.getenv("POSTGRES_USER")),
+        "PASSWORD": str(os.getenv("POSTGRES_PASSWORD")),
+        "HOST": str(os.getenv("SQL_HOST")),
+        "PORT": str(os.getenv("SQL_PORT")),
+        "OPTIONS": {"options": str(os.getenv("SQL_OPTIONS"))},
     }
 }
 

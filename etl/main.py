@@ -1,42 +1,36 @@
-import psycopg
-import config
-from extract import PostgresMerge
-from contextlib import closing
-from state import State, RedisStorage
-from transform import Movie
 import logging
-import datetime
-from backoff import backoff
-from redis import exceptions
 import time
+from contextlib import closing
+
+import config
+import psycopg
+from backoff import backoff
+from extract import PostgresExtract
 from load import loader_elasticsearch
+from redis import exceptions
+from state import RedisStorage, State
+from transform import Movie
 
 
-@backoff(exception=(exceptions.RedisError))
-def save_state(state: State, states: dict[str, datetime.datetime]):
-    for key, value in states.items():
-        state.set_state(key, value)
-
+@backoff(exception=(psycopg.Connection, exceptions.ConnectionError))
 def main():
     with closing(psycopg.connect(**config.DATABASE)) as psql_conn:
-        storage = RedisStorage(redis_adapter=config.REDIS)
-        state = State(storage=storage)
-        result = PostgresMerge(
-            connection=psql_conn, state=state
-        )
-        data, states = result.get_update_film_work()
-        transform_data = Movie.transform_data(data)
-        
-        loader_elasticsearch(transform_data)
-        
-        # сохраняем состояние после загрузки данных в Elastic
-        save_state(state=state, states=states)
+        while True:
+            state = State(RedisStorage(redis_adapter=config.REDIS))
+            data_extract = PostgresExtract(psql_conn, state)
+            data, states = data_extract.get_updated_films()
 
-        logging.info('Успех!')
-         
-            
+            if not data:
+                logging.info("Нет новых данных для обновления в Elasticsearch")
+            else:
+                transform_data: list[Movie] = Movie.transform_data(data)
+
+                loader_elasticsearch(transform_data)
+                state.update_states(states)
+                logging.info("Данные успешно обработаны ;)")
+
+            time.sleep(15)
+
 
 if __name__ == "__main__":
-    while True:
-        main()
-        time.sleep(10)
+    main()

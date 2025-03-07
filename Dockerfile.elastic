@@ -1,0 +1,6 @@
+FROM elasticsearch:8.6.2
+
+COPY ./es_schema.json /es_schema.json
+COPY entrypoint.sh /entrypoint.sh
+
+ENTRYPOINT [ "/entrypoint.sh" ]

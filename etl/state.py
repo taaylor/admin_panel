@@ -1,12 +1,11 @@
 import abc
 import json
 import logging
+from datetime import datetime
 from typing import Any, Dict
 
 import redis
 import redis.exceptions
-
-from backoff import backoff
 
 
 class BaseStorage(abc.ABC):
@@ -31,16 +30,14 @@ class RedisStorage(BaseStorage):
         """Сохранить состояние в хранилище."""
         json_state = json.dumps(state)
         self.redis_adapter.set("storage", json_state)
-        logging.info("Состояние успешно сохранилось в хранилище.")
 
     def retrieve_state(self) -> Dict[str, Any]:
         """Получить состояние из хранилища."""
         try:
             data = self.redis_adapter.get("storage")
             if data is None:
-                return {} 
+                return {}
             convert_dict = json.loads(data)
-            logging.info("Состояние успешно получено из хранилища.")
             return convert_dict
         except json.JSONDecodeError:
             logging.error("Ошибка декодирования JSON в retrieve_state")
@@ -61,6 +58,12 @@ class State:
 
     def get_state(self, key: str) -> Any:
         state = self.storage.retrieve_state().get(key)
-        if not state or state == 'None':
-            return '1970-01-01 00:00:00'
+        if not state or state == "None":
+            return datetime.min
+        logging.info("Состояние успешно получено из хранилища.")
         return state
+
+    def update_states(self, states: dict[str, str]) -> None:
+        for key, value in states.items():
+            self.set_state(key, value)
+            logging.info(f"Состояние - '{key}' успешно сохранилось в хранилище.")

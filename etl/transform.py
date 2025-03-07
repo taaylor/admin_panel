@@ -1,78 +1,53 @@
-from pydantic import BaseModel, BeforeValidator
-from typing import List, Dict, Any
-from typing_extensions import Annotated
+import logging
+import uuid
+from typing import Annotated, Any, Self
 
-def _convert_str(value: set) -> str:
-    return ', '.join(value)
+from pydantic import BaseModel, Field, ValidationError, model_validator
 
-def _convert_list(value: set) -> list:
-    return list(value)
 
 class Movie(BaseModel):
-    id: str
-    imdb_rating: float
-    genres: Annotated[List[str], BeforeValidator(_convert_list)]
+    id: Annotated[uuid.UUID, Field(alias="fw_id")]
+    imdb_rating: Annotated[float, Field(alias="rating")]
     title: str
-    description: str
-    directors_names: Annotated[str, BeforeValidator(_convert_str)]
-    actors_names: Annotated[str, BeforeValidator(_convert_str)]
-    writers_names: Annotated[str, BeforeValidator(_convert_str)]
-    directors: Annotated[List[Dict[str, str]], BeforeValidator(_convert_list)]
-    actors: Annotated[List[Dict[str, str]], BeforeValidator(_convert_list)]
-    writers: Annotated[List[Dict[str, str]], BeforeValidator(_convert_list)]
+    genres: list[str]
+    description: str | None = None
+    persons: list[dict[str, str]] = Field(exclude=True)
+    directors_names: list[str] = Field(default_factory=list)
+    actors_names: list[str] = Field(default_factory=list)
+    writers_names: list[str] = Field(default_factory=list)
+    directors: list[dict[str, str]] = Field(default_factory=list)
+    actors: list[dict[str, str]] = Field(default_factory=list)
+    writers: list[dict[str, str]] = Field(default_factory=list)
 
-    def transform_data(data: List[dict[str, Any]]) -> List['Movie']:
-        """ Преобразует сырые данные из Postgres в список объектов Movie """
+    @model_validator(mode="after")
+    def parse_persons(self) -> Self:
 
-        movies = dict()
+        for item in self.persons:
+            person = {"id": item["id"], "name": item["name"]}
 
-        for item in data:
-            movies_id = str(item.get('fw_id'))
-            
-            if movies_id not in movies:
-                movies[movies_id] = {
-                    'id': movies_id,
-                    'imdb_rating': item.get('rating'),
-                    'genres': set(),
-                    'title': item.get('title'),
-                    'description': item.get('description'),
-                    'directors_names': set(),
-                    'actors_names': set(),
-                    'writers_names': set(),
-                    'directors': list(),
-                    'actors': list(),
-                    'writers': list()
-                }
+            if item.get("role") == "director":
+                self.directors.append(person)
+                self.directors_names.append(person["name"])
+            elif item.get("role") == "writer":
+                self.writers.append(person)
+                self.writers_names.append(person["name"])
+            elif item.get("role") == "actor":
+                self.actors.append(person)
+                self.actors_names.append(person["name"])
+        return self
 
-            movie = movies.get(movies_id)
+    @classmethod
+    def transform_data(cls, data: list[dict[str, Any]]) -> list["Movie"]:
+        transform_data = []
+        for obj in data:
+            try:
+                transform_data.append(cls(**obj))
+            except ValidationError as error:
+                logging.warning(
+                    f"Пропущена невалидная запись UUID({obj.get('fw_id')}): {error}"
+                )
 
-            if gen := item.get('name'):
-                movie['genres'].add(gen)
-
-            person = {'id': str(item.get('id')), 'name': item.get('full_name')}
-            if item.get('role') == 'actor':
-                movie['actors_names'].add(person['name'])
-                if person not in movie['actors']:
-                    movie['actors'].append(person) 
-            elif item.get('role') == 'writer':
-                movie['writers_names'].add(person['name'])
-                if person not in movie['writers']:
-                    movie['writers'].append(person)
-            elif item.get('role') == 'director':
-                movie['directors_names'].add(person['name'])
-                if person not in movie['directors']:
-                    movie['directors'].append(person)
-
-        movies_data = [Movie(**value) for value in movies.values()]
-        return movies_data
-
-
-        
-
-
-
-
-
-
-
-        
+        logging.info(
+            "Данные прошли трансформацию успешно, кол-во - %s", len(transform_data)
+        )
+        return transform_data
