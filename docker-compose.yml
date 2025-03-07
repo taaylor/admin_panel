@@ -47,8 +47,30 @@ services:
       - 80:80
     depends_on:
       - django
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s #Проверять БД каждые 5 секунд
+      retries: 3 # 3 попытки перед откатом контейнера
+      timeout: 3s # ожидать ответ неболее 3 сек
+
+  redis:
+    image: redis:alpine-7
+    restart: always
+    command: ["redis-server", "--loglevel", "warning"]
+    volumes:
+      - redis_data:/
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]   
+      interval: 5s                    
+      timeout: 3s                          
+      retries: 3
+
+  elasticsearch:   
+
 
 volumes:
   data_postgres:
   volume_static:
   volume_media:
+  redis_data:
+
