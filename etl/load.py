@@ -1,4 +1,3 @@
-import requests
 from transform import Movie
 import logging
 import config
@@ -20,8 +19,7 @@ def loader_elasticsearch(data: list[Movie]) -> None:
     
     for success, info in helpers.streaming_bulk(els, values):
         if not success:
-            logging.warning(f'Ошибка при загрузке данных в Elasticsearch: {info}')
-    
+            logging.warning(f'Ошибка при загрузке данных в Elasticsearch: {info}')  
     logging.info('Данные успешно загружены в Elasticsearch')
     
         

@@ -39,6 +39,6 @@ PERSON_STATE = 'person_state'
 GENRE_STATE = 'genre_state'
 FW_STATE = 'film_work_state'
 
-
-
 NULL_ID = ['00000000-0000-0000-0000-000000000000']
+
+BATCH_SIZE = 100
