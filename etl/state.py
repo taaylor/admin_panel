@@ -1,8 +1,8 @@
 import abc
 import json
 import logging
-from typing import Any, Dict
 from datetime import datetime
+from typing import Any, Dict
 
 import redis
 import redis.exceptions
@@ -36,7 +36,7 @@ class RedisStorage(BaseStorage):
         try:
             data = self.redis_adapter.get("storage")
             if data is None:
-                return {} 
+                return {}
             convert_dict = json.loads(data)
             return convert_dict
         except json.JSONDecodeError:
@@ -46,6 +46,7 @@ class RedisStorage(BaseStorage):
 
 class State:
     """Класс для работы с состояниями."""
+
     def __init__(self, storage: BaseStorage) -> None:
         self.storage = storage
 
@@ -57,11 +58,11 @@ class State:
 
     def get_state(self, key: str) -> Any:
         state = self.storage.retrieve_state().get(key)
-        if not state or state == 'None':
+        if not state or state == "None":
             return datetime.min
         logging.info("Состояние успешно получено из хранилища.")
         return state
-    
+
     def update_states(self, states: dict[str, str]) -> None:
         for key, value in states.items():
             self.set_state(key, value)

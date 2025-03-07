@@ -25,7 +25,9 @@ def backoff(
                 try:
                     return func(*args, **kwargs)
                 except exception as e:
-                    logging.warning(f"Возникло исключение на стороне сервиса: '{e}'. Попытка #{attempt}")
+                    logging.warning(
+                        f"Возникло исключение на стороне сервиса: '{e}'. Попытка #{attempt}"
+                    )
                 except Exception as e:
                     logging.warning(f"Возникло исключение: '{e}'. Попытка #{attempt}")
                 if jitter:

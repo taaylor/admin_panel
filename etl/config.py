@@ -19,26 +19,24 @@ logging.basicConfig(
 )
 
 REDIS = redis.Redis(
-    host=os.getenv("REDIS_HOST"), 
-    port=os.getenv("REDIS_PORT"), 
+    host=os.getenv("REDIS_HOST"),
+    port=os.getenv("REDIS_PORT"),
     decode_responses=True,
 )
 
 DATABASE = {
-    'dbname': 'movies_db', 
-    'user': 'admin',
-    'password': '1234',
-    'host': 'localhost',
-    'port': '5432'
+    "dbname": os.getenv("POSTGRES_DB"),
+    "user": os.getenv("POSTGRES_USER"),
+    "password": os.getenv("POSTGRES_PASSWORD"),
+    "host": os.getenv("SQL_HOST"),
+    "port": os.getenv("SQL_PORT"),
 }
 
-ELASTICSEARCH = 'http://127.0.0.1:9200'
+ELASTICSEARCH = f"http://{os.getenv('ELASTIC_HOST')}:{os.getenv('ELASTIC_PORT')}"
 
 # key state
-PERSON_STATE = 'person_state'
-GENRE_STATE = 'genre_state'
-FW_STATE = 'film_work_state'
+PERSON_STATE = "person_state"
+GENRE_STATE = "genre_state"
+FW_STATE = "film_work_state"
 
-NULL_ID = ['00000000-0000-0000-0000-000000000000']
-
-BATCH_SIZE = 100
+NULL_ID = ["00000000-0000-0000-0000-000000000000"]

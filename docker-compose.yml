@@ -10,8 +10,6 @@ services:
       - volume_media:/data/media  # Медиа-файлы
     env_file:
       - .env
-    ports:
-      - 8000:8000
     depends_on:
       postgres:
         condition: service_healthy
@@ -30,7 +28,7 @@ services:
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 5s #Проверять БД каждые 5 секунд
-      retries: 3 # 3 попытки перед откатом контейнера
+      retries: 10 # 3 попытки перед откатом контейнера
       timeout: 3s # ожидать ответ неболее 3 сек
 
   nginx:
@@ -54,23 +52,55 @@ services:
       timeout: 3s # ожидать ответ неболее 3 сек
 
   redis:
-    image: redis:alpine-7
+    image: redis:7-alpine
     restart: always
     command: ["redis-server", "--loglevel", "warning"]
     volumes:
-      - redis_data:/
+      - redis_data:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]   
-      interval: 5s                    
-      timeout: 3s                          
-      retries: 3
+      interval: 10s                    
+      timeout: 5s                          
+      retries: 10
 
   elasticsearch:   
+    build:
+      context: .
+      dockerfile: Dockerfile.elastic
+    restart: always
+    volumes:
+      - elastic_data:/usr/share/elasticsearch/data
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - ES_JAVA_OPTS=-Xms200m -Xmx200m
+    ports:
+      - 9200:9200
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9200/_cluster/health"]
+      interval: 12s                    
+      timeout: 7s                          
+      retries: 10
 
+  etl:
+    build:
+      context: .
+      dockerfile: etl/Dockerfile.etl
+    restart: always
+    env_file:
+      - .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
 
 volumes:
   data_postgres:
   volume_static:
   volume_media:
   redis_data:
+  elastic_data:
 
