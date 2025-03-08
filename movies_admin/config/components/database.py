@@ -3,12 +3,12 @@ import os
 DATABASES = {
     "default": {
         "ENGINE": str(os.getenv("ENGINE")),
-        "NAME": str(os.getenv("POSTGRES_DB")),
+        "NAME": str(os.getenv("POSTGRES_DBNAME")),
         "USER": str(os.getenv("POSTGRES_USER")),
         "PASSWORD": str(os.getenv("POSTGRES_PASSWORD")),
-        "HOST": str(os.getenv("SQL_HOST")),
-        "PORT": str(os.getenv("SQL_PORT")),
-        "OPTIONS": {"options": str(os.getenv("SQL_OPTIONS"))},
+        "HOST": str(os.getenv("POSTGRES_HOST")),
+        "PORT": str(os.getenv("POSTGRES_PORT")),
+        "OPTIONS": {"options": str(os.getenv("POSTGRES_OPTIONS"))},
     }
 }
 

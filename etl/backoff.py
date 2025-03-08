@@ -21,7 +21,7 @@ def backoff(
         def inner(*args, **kwargs):
             t = start_sleep_time
             attempt = 1
-            while True:
+            while attempt < 10:
                 try:
                     return func(*args, **kwargs)
                 except exception as e:
@@ -35,6 +35,9 @@ def backoff(
                 attempt += 1
                 time.sleep(t)
                 t = min(t * factor, border_sleep_time)
+            logging.error(
+                "ETL перкратил свою работу, из-за превышения попыток подключения"
+            )
 
         return inner
 

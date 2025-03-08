@@ -5,10 +5,12 @@ from backoff import backoff
 from elasticsearch import Elasticsearch, exceptions, helpers
 from transform import Movie
 
+settings = config.ConfigApp()
+
 
 @backoff(exception=(exceptions.ConnectionError))
 def loader_elasticsearch(data: list[Movie]) -> None:
-    els = Elasticsearch(config.ELASTICSEARCH)
+    els = Elasticsearch(settings.elasticsearch.url_elastic)
 
     values = [
         {"_index": "movies", "_id": movie.id, "_source": movie.model_dump()}

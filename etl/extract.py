@@ -12,6 +12,8 @@ import redis.exceptions
 from backoff import backoff
 from state import State
 
+settings = config.ConfigApp()
+
 
 def _get_ids_and_state_table(
     cursor: psycopg.Cursor, table: Literal["person", "genre"], state: State
@@ -24,9 +26,9 @@ def _get_ids_and_state_table(
         LIMIT 100;
     """
     last_state = (
-        state.get_state(config.PERSON_STATE)
+        state.get_state(settings.redis_person_state)
         if table == "person"
-        else state.get_state(config.GENRE_STATE)
+        else state.get_state(settings.redis_genre_state)
     )
     request = cursor.execute(query, (last_state,))
     result = request.fetchall()
@@ -72,21 +74,21 @@ def _get_updated_film_work(
         LIMIT 100 
     """
     person, genre = _get_updated_person_and_genre(connect, state)
-    last_state_fw = state.get_state(config.FW_STATE)
+    last_state_fw = state.get_state(settings.redis_fw_state)
     with closing(connect.cursor()) as psql_cursor:
         request = psql_cursor.execute(query, (person[0], genre[0], last_state_fw))
         result = request.fetchall()
 
         states = {
-            config.FW_STATE: last_state_fw,
-            config.GENRE_STATE: genre[1],
-            config.PERSON_STATE: person[1],
+            settings.redis_fw_state: last_state_fw,
+            settings.redis_genre_state: genre[1],
+            settings.redis_person_state: person[1],
         }
         if not result:
             return [], states
 
         ids_fw = list(i[0] for i in result)
-        states[config.FW_STATE] = result[-1][1]
+        states[settings.redis_fw_state] = result[-1][1]
 
         return ids_fw, states
 

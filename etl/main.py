@@ -7,16 +7,22 @@ import psycopg
 from backoff import backoff
 from extract import PostgresExtract
 from load import loader_elasticsearch
-from redis import exceptions
+from redis import Redis, exceptions
 from state import RedisStorage, State
 from transform import Movie
+
+settings = config.ConfigApp()
+settings.start_log()
 
 
 @backoff(exception=(psycopg.Connection, exceptions.ConnectionError))
 def main():
-    with closing(psycopg.connect(**config.DATABASE)) as psql_conn:
+    with closing(
+        psycopg.connect(**settings.postgres.model_dump())
+    ) as psql_conn, closing(Redis(**settings.redis.model_dump())) as redis_conn:
+
         while True:
-            state = State(RedisStorage(redis_adapter=config.REDIS))
+            state = State(RedisStorage(redis_adapter=redis_conn))
             data_extract = PostgresExtract(psql_conn, state)
             data, states = data_extract.get_updated_films()
 
