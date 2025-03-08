@@ -4,8 +4,11 @@ import logging
 from datetime import datetime
 from typing import Any, Dict
 
+import config
 import redis
 import redis.exceptions
+
+settings = config.ConfigApp()
 
 
 class BaseStorage(abc.ABC):
@@ -29,12 +32,12 @@ class RedisStorage(BaseStorage):
     def save_state(self, state: Dict[str, Any]) -> None:
         """Сохранить состояние в хранилище."""
         json_state = json.dumps(state)
-        self.redis_adapter.set("storage", json_state)
+        self.redis_adapter.set(settings.redis_key_storage, json_state)
 
     def retrieve_state(self) -> Dict[str, Any]:
         """Получить состояние из хранилища."""
         try:
-            data = self.redis_adapter.get("storage")
+            data = self.redis_adapter.get(settings.redis_key_storage)
             if data is None:
                 return {}
             convert_dict = json.loads(data)
