@@ -53,7 +53,7 @@ ELASTIC_PORT=9200
 git clone https://github.com/taaylor/admin_panel.git
 ```
 
-Для старта **админки** достаточно иметь на своей махине [Docker](https://www.docker.com/)
+Для старта **админки** достаточно иметь на своей рабочей машине [Docker](https://www.docker.com/)
 ```bash
 docker-compose up --build
 ```
